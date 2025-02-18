@@ -7,7 +7,7 @@ use PDO;
 
 abstract class Model
 {
-    protected string $table = '';
+    protected string $table = 'event';
     private Db $connector;
 
     public function __construct(Db $connector)
