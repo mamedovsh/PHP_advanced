@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Commands;
 
 use App\Application;
@@ -8,20 +7,18 @@ use App\Models\Event;
 
 //php runner -c save_event --name 'Имя события' --receiver ‘Айди получателя, пока
 //любой’ --text 'Текст напоминания' --cron '* * * * *'
-class SaveEventCommand extends Command
+class SaveEventsCommand extends Command
 {
 
     protected Application $app;
 
     public function __construct(Application $app)
-
     {
 
         $this->app = $app;
 
     }
-    public function run(array $options  = []): void
-
+    public function run(array $options = []): void
     {
 
         $options = $this->getGetoptOptionValues();
@@ -46,30 +43,35 @@ class SaveEventCommand extends Command
 
         $params = [
 
-            'name' => $options['name'],
+            'name'        => $options['name'],
 
-            'text' => $options['text'],
+            'text'        => $options['text'],
 
             'receiver_id' => $options['receiver'],
 
-            'minute' => $cronValues[0],
+            'minute'      => $cronValues[0],
 
-            'hour' => $cronValues[1],
+            'hour'        => $cronValues[1],
 
-            'day' => $cronValues[2],
+            'day'         => $cronValues[2],
 
-            'month' => $cronValues[3],
+            'month'       => $cronValues[3],
 
-            'day_of_week' => $cronValues[4]
+            'day_of_week' => $cronValues[4],
 
         ];
 
-        $this->saveEvent($params);
+        $eventModel = new Event(new SQLite($this->app));
+
+        $eventSaver = new EventSaver($eventModel);
+
+        $eventSaver->handle($params);
+
+        // $this->saveEvent($params);
 
     }
 
     private function getGetoptOptionValues(): array
-
     {
 
         $shortopts = 'c:h:';
@@ -94,26 +96,24 @@ class SaveEventCommand extends Command
 
     }
 
-    private function isNeedHelp(array $options): bool
-
+    public function isNeedHelp(array $options): bool
     {
 
-        return !isset($options['name']) ||
+        return ! isset($options['name']) ||
 
-            !isset($options['text']) ||
+        ! isset($options['text']) ||
 
-            !isset($options['receiver']) ||
+        ! isset($options['receiver']) ||
 
-            !isset($options['cron']) ||
+        ! isset($options['cron']) ||
 
-            isset($options['help']) ||
+        isset($options['help']) ||
 
-            isset($options['h']);
+        isset($options['h']);
 
     }
 
     private function showHelp()
-
     {
 
         echo " Это тестовый скрипт добавления правил
@@ -135,7 +135,6 @@ class SaveEventCommand extends Command
     }
 
     private function getCronValues(string $cronString): array
-
     {
 
         $cronValues = explode(" ", $cronString);
@@ -151,7 +150,6 @@ class SaveEventCommand extends Command
     }
 
     private function saveEvent(array $params): void
-
     {
 
         $event = new Event(new SQLite($this->app));
