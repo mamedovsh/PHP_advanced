@@ -3,33 +3,67 @@ namespace App\Commands;
 
 use App\Application;
 use App\Telegram\TelegramApiImpl;
+use Predis\Client;
+use App\cache\Redis;
 
 class TgMessagesCommand extends Command
 {
     // public Aplications $app;
+    private int $offset;
+    private array|null $oldMessages;
+    private Redis $redis;
+
+
     public function __construct(public Application $app)
     {
         $this->app = $app;
-    }
+        $this->offset = 0;
+        $this->oldMessages =[];
+        // $this->redis = new Redis();
 
-    public function run(array $options = []): void
-    {
-        $tgApi = new TelegramApiImpl($this->app->env('TELEGRAM_TOKEN'));
+        $client = new Client([
+            'scheme' => 'tcp',
+            'host' => '127.0.0.1',
+            'port' => 6379,
+            ]);
+            $this->redis = new Redis($client);
+}
+function run(array $options = []): void
+{
+echo json_encode($this->receiveNewMessages());
+}
+protected function getTelegramApiImpl(): TelegramApiImpl
+{
+return new TelegramApiImpl($this->app-> env( key: 'TELEGRAM_TOKEN'));
+}
+private function receiveNewMessages(): array
+{
+$offset = $this->redis->get(key: 'tg_messages: offset', default: 0);
 
-        echo json_encode($tgApi->getMessage(0));
-        
-        // $eventSender = new EventSender(new TelegramApiImpl($this->app->env('TELEGRAM_TOKEN')));
+$result = $tgApi->getMessages($offset);
 
-        // $cron = new Cron();
+$this->redis->set(key: 'tg_messages: offset', value: $result['offset'] ?? 0);
 
-        // $eventModel = new Event(new SQLite($this-> app));
-        // $eventSaver = new EventSaver($eventModel);
-        // $tgEvents = new TgEvents($cron, $eventSaver, $tgApi, $eventSender);
+$oldMessages = json_decode($this->redis->get(key: 'tg_messages:old_messages'));
 
-        // while(true) {
-        //     $tgEvents->handle();
-        //     sleep(1);
+// $messages [];
 
-        // }
-    }
+foreach ($result['result'] ?? [ ] as $chatId => $newMessage) {
+
+if (isset($oldMessages[$chatId])) {
+
+$oldMessages[$chatId] = [...$oldMessages [$chatId], ... $newMessage];
+
+} else {
+
+$oldMessages [$chatId] = $newMessage;
+
+}
+
+$messages[$chatId] = $oldMessages[$chatId];
+}
+$this->redis->set(key. 'tg_messages:old_messages', json_encode($oldMessages));
+
+return $messages;
+}
 }
